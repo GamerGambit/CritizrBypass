@@ -135,7 +135,7 @@ async function main()
     // reload the page every 20 minutes to keep the sessions active
     setTimeout(function() {
         console.log("Refreshing page");
-        location.reload();
+        window.location.replace("https://critizr.com/pro/messages/active/");
     }, 1000 * 60 * 20);
 }
 

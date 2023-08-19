@@ -9,6 +9,16 @@
 // @grant        none
 // ==/UserScript==
 
+function getFromID()
+{
+    const id = location.pathname.split("/")[4];
+    return $.ajax({
+        url: "https://critizr.com/bo/api/v2/threads/" + id,
+        dataType: "json",
+        async: false
+    });
+}
+
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -97,32 +107,27 @@ async function processMessage(json, textStatus, xhr)
     speedyMarkDone();
 }
 
-function main()
+async function main()
 {
+    const alerts = $("div.alert-navs-region > div > nav").children();
+    const messages = $("div.need-or-should-reply-navs-region > div > nav").children();
+
     // Dissatisfaction Alerts
     console.log("Checking Dissatisfaction Alerts");
-    $("div.alert-navs-region > div > nav").children().each(function(i, e){
-        $(e).trigger("click"); // Click the element
-        const id = location.pathname.split("/")[4];
-        $.ajax({
-            url: "https://critizr.com/bo/api/v2/threads/" + id,
-            dataType: 'json',
-            async: false,
-            success: processDissatisfactionAlert
-        });
-    });
+    for (let i = 0; i < alerts.length; ++i)
+    {
+        alerts.eq(i).trigger("click"); // Click the element
+        const result = getFromID();
+        await processDissatisfactionAlert(result.responseJSON, result.statusText, result);
+    };
 
     // Messages (could be positive feedback or replies afaik)
-    $("div.need-or-should-reply-navs-region > div > nav").children().each(function(i, e){
-        $(e).trigger("click"); // Click the element
-        const id = location.pathname.split("/")[4];
-        $.ajax({
-            url: "https://critizr.com/bo/api/v2/threads/" + id,
-            dataType: 'json',
-            async: false,
-            success: processMessage
-        });
-    });
+    for (let i = 0; i < messages.length; ++i)
+    {
+        messages.eq(i).trigger("click"); // Click the element
+        const result = getFromID();
+        await processMessage(result.responseJSON, result.statusText, result);
+    };
 
     // reload the page every 20 minutes to keep the sessions active
     setTimeout(function() {

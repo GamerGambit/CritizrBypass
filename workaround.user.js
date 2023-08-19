@@ -142,7 +142,7 @@ async function main()
 (function() {
     'use strict';
 
+    console.log("Loaded Page");
     // Check everything after 5 seconds.. hopefully this is enough time for critizr to load everything behind the scenes
     setTimeout(main, 5000);
-
 })();

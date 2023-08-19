@@ -31,7 +31,8 @@ function speedyMarkDone()
 async function processDissatisfactionAlert(json, textStatus, xhr)
 {
     var name = json.last_item.object.user.first_name.trim();
-    console.log(json.id + " | Detected dissatisfaction from " + name);
+    const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at)) / 1000); // how old this dissatisfaction is in seconds
+    console.log(json.id + " | Detected dissatisfaction from " + name + " | Age: " + age + "s");
 
     // Sometimes a name is not provided and we get an email instead.
     // Prepend a space so we can do "Hi{name}" and it will look good
@@ -97,8 +98,9 @@ async function processMessage(json, textStatus, xhr)
     if (json.state != "need_reply")
         return;
 
-    var name = json.last_item.object.user.first_name.trim();
-    console.log(json.id + " | Detected message from " + name);
+    const name = json.last_item.object.user.first_name.trim();
+    const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at) / 1000)); // how old this message is in seconds
+    console.log(json.id + " | Detected message from " + name + " | Age: " + age + "s");
 
     // If we have navigated to this feedback from another sometimes it takes a bit for the page to rehydrate.
     // Until its rehydrated the reply form wont exist.

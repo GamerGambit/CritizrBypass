@@ -68,7 +68,7 @@ async function processDissatisfactionAlert(json, textStatus, xhr)
     $("[data-trigger-action='reply']").trigger("click"); // Click "Reply"
 
     // We cant fill out the reply immediately after clicking "Reply" so wait.
-    await delay(2000);
+    await delay(5000);
 
     console.log(json.id + " | Filling out reply field");
     // Fill out the reply message
@@ -104,7 +104,7 @@ async function processMessage(json, textStatus, xhr)
 
     // If we have navigated to this feedback from another sometimes it takes a bit for the page to rehydrate.
     // Until its rehydrated the reply form wont exist.
-    await delay(2000);
+    await delay(5000);
 
     // Since its a message and not a dissatisfaction it probably does not need to be actioned.
     speedyMarkDone();

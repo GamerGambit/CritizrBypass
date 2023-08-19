@@ -46,8 +46,9 @@ async function processDissatisfactionAlert(json, textStatus, xhr)
 
     // Shortcut case where the customer has left a dissatifaction but no remark.
     // Just mark it as done and bail
-    if ($(".participation-item-no-remark").length > 0)
+    if (!json.last_item.object.hasOwnProperty("remark"))
     {
+        console.log(json.id + " | No remark, marking as done");
         speedyMarkDone();
         return;
     }

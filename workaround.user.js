@@ -99,7 +99,7 @@ async function processMessage(json, textStatus, xhr)
         return;
 
     const name = json.last_item.object.user.first_name.trim();
-    const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at) / 1000)); // how old this message is in seconds
+    const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at)) / 1000); // how old this message is in seconds
     console.log(json.id + " | Detected message from " + name + " | Age: " + age + "s");
 
     // If we have navigated to this feedback from another sometimes it takes a bit for the page to rehydrate.

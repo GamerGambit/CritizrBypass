@@ -121,6 +121,7 @@ async function main()
         alerts.eq(i).trigger("click"); // Click the element
         const result = getFromID();
         await processDissatisfactionAlert(result.responseJSON, result.statusText, result);
+        await delay(5000);
     };
 
     // Messages (could be positive feedback or replies afaik)
@@ -129,6 +130,7 @@ async function main()
         messages.eq(i).trigger("click"); // Click the element
         const result = getFromID();
         await processMessage(result.responseJSON, result.statusText, result);
+        await delay(5000);
     };
 
     // reload the page every 20 minutes to keep the sessions active

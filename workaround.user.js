@@ -56,12 +56,11 @@ async function processDissatisfactionAlert(json, textStatus, xhr)
 
     // Feedback needs a "type" (issue, compliment, suggestion, question)
     // For dissatisfaction, always select "issue"
-    // BUG: when you select a type the page is "rehydrated" so the actual reply code wont execute. Just return now and the alert should get picked up in the next run.
     if ($(".btn-howto").length > 0)
     {
         console.log(json.id + " | Setting feedback type to \"Issue\"");
         $(".type-chooser .btn-secondary:first-child").trigger("click"); // Click "Issue" type button
-        return;
+        await delay(5000);
     }
 
     console.log(json.id + " | Clicking Reply", $("[data-trigger-action='reply']"));

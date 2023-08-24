@@ -9,6 +9,19 @@
 // @grant        none
 // ==/UserScript==
 
+let storeids = [];
+
+function getAPIKey()
+{
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.apikey || localStorage.getItem("apikey");
+}
+
+function putAPIKey(key)
+{
+    localStorage.setItem("apikey", key);
+}
+
 function getFromID()
 {
     const id = location.pathname.split("/")[4];
@@ -17,6 +30,11 @@ function getFromID()
         dataType: "json",
         async: false
     });
+}
+
+function shouldProcess(json)
+{
+    return storeids.includes(parseInt(json.place.external_id, 10));
 }
 
 function delay(ms) {
@@ -44,6 +62,12 @@ async function processDissatisfactionAlert(json, textStatus, xhr)
     // If we have navigated to this feedback from another sometimes it takes a bit for the page to rehydrate.
     // Until its rehydrated the reply form wont exist.
     await delay(5000);
+
+    if (!shouldProcess(json))
+    {
+        console.log("Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
+        return;
+    }
 
     // Shortcut case where the customer has left a dissatifaction but no remark.
     // Just mark it as done and bail
@@ -105,6 +129,12 @@ async function processMessage(json, textStatus, xhr)
     // Until its rehydrated the reply form wont exist.
     await delay(5000);
 
+    if (!shouldProcess(json))
+    {
+        console.log("Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
+        return;
+    }
+
     // Since its a message and not a dissatisfaction it probably does not need to be actioned.
     speedyMarkDone();
 }
@@ -143,7 +173,42 @@ async function main()
 (function() {
     'use strict';
 
-    console.log("Loaded Page");
+    console.log("Loaded Page, checking auth");
+
+    let apikey = getAPIKey();
+    do
+    {
+        // No API key found in query parameters or localstorage so prompt for one
+        if (!apikey || apikey.length == 0)
+        {
+            apikey = prompt("Enter your API key:");
+        }
+
+        // Cancel clicked, stop pestering.
+        if (apikey === null)
+            return;
+
+        // Make sure there is at least 1 store registered to this key.
+        // The server will return an empty array even for bad keys
+        const response = $.ajax({url: "https://critizr.gambyy.xyz/AuthorizedKeys/Stores/" + apikey, type: "GET", dataType: "json", async: false});
+
+        // No stores assigned to this key
+        if (!response.responseJSON || response.responseJSON.length == 0)
+        {
+            alert("Invalid API Key");
+            apikey = null;
+            continue;
+        }
+
+        // We have stores, so assign them to `storeids`
+        storeids = response.responseJSON;
+        putAPIKey(apikey);
+        break;
+    }
+    while(true);
+
+    console.log("Automating feedback for store ids: " + storeids.join(", "));
+
     // Check everything after 5 seconds.. hopefully this is enough time for critizr to load everything behind the scenes
     setTimeout(main, 5000);
 })();

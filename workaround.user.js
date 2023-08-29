@@ -10,6 +10,10 @@
 // ==/UserScript==
 
 let storeids = [];
+const negativeWords = [
+    "unhappy", "not happy", "terrible", "cold", "paid", "asked", "extra", "missing", "forgot", "doubt", "poor", "dry", "burnt", "undercooked", "soggy", "lacking", "misleading", "wrong", "pathetic", "dissapoint", "incorrect", "allergic",
+    "upset", "cut", "late", "barely", "but", "ordered"
+];
 
 function getAPIKey()
 {
@@ -37,6 +41,22 @@ function shouldProcess(json)
     return storeids.includes(parseInt(json.place.external_id, 10));
 }
 
+function isPotentiallyNegativeMessage(json)
+{
+    // No remark. This happens if they filled out the survey and didnt leave a remark
+    if (!json.last_item.object.hasOwnProperty("remark"))
+        return false;
+
+    if (json.last_item.object.hasOwnProperty("survey_participation"))
+    {
+        // No questions marked as triggering a dissatisfaction (for NPS > 8
+        if (json.last_item.object.survey_participation.answer_triggering_alert === null)
+            return false;
+    }
+
+    return negativeWords.some(w => json.last_item.object.remark.content.toLowerCase().includes(w));
+}
+
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -58,10 +78,6 @@ async function processDissatisfactionAlert(json, textStatus, xhr)
     {
         name = " " + name;
     }
-
-    // If we have navigated to this feedback from another sometimes it takes a bit for the page to rehydrate.
-    // Until its rehydrated the reply form wont exist.
-    await delay(5000);
 
     if (!shouldProcess(json))
     {
@@ -104,7 +120,7 @@ async function processDissatisfactionAlert(json, textStatus, xhr)
     $(".send-button > button:first-child").trigger("click"); // Click "Send and put on hold" button.
 
     // Potentially wait for the spell checker modal
-    await delay(10000);
+    await delay(5000);
 
     // Spell checker modal
     if ($(".spell-checker").length > 0)
@@ -112,6 +128,9 @@ async function processDissatisfactionAlert(json, textStatus, xhr)
         console.log(json.id + " | Detected spell checker modal");
         // Click "Confirm and Send"
         $(".modal-footer button:last-child").trigger("click");
+
+        // Wait for the modal to disappear
+        await delay(5000);
     }
 }
 
@@ -125,18 +144,32 @@ async function processMessage(json, textStatus, xhr)
     const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at)) / 1000); // how old this message is in seconds
     console.log(json.id + " | Detected message from " + name + " | Age: " + age + "s");
 
-    // If we have navigated to this feedback from another sometimes it takes a bit for the page to rehydrate.
-    // Until its rehydrated the reply form wont exist.
-    await delay(5000);
-
     if (!shouldProcess(json))
     {
-        console.log("Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
+        console.log(json.id + " | Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
         return;
     }
 
-    // Since its a message and not a dissatisfaction it probably does not need to be actioned.
-    speedyMarkDone();
+    // Check if we should potentially put them on hold.
+    if (isPotentiallyNegativeMessage(json))
+    {
+        console.log(json.id + " | Potentially negative message, putting on hold.");
+        $("[data-trigger-action='mark_as_active']").click()
+    }
+    else
+    {
+        if (json.last_item.object.hasOwnProperty("survey_participation") && json.last_item.object.survey_participation.answer_to_highlight.value > 8)
+        {
+            console.log(json.id + " | NPS > 8, marking as compliment");
+            $(".type-chooser .btn-secondary").eq(1).click(); // Click "Compliment" type button
+            await delay(5000); // Wait for the page to rehydrate after choosing feedback type
+        }
+
+        speedyMarkDone();
+    }
+
+    // Wait for the page to update before returning
+    await delay(5000);
 }
 
 async function main()
@@ -149,18 +182,24 @@ async function main()
     for (let i = 0; i < alerts.length; ++i)
     {
         alerts.eq(i).trigger("click"); // Click the element
+
+        // Wait until the page has rehydrated.
+        await delay(5000);
+
         const result = getFromID();
         await processDissatisfactionAlert(result.responseJSON, result.statusText, result);
-        await delay(5000);
     };
 
     // Messages (could be positive feedback or replies afaik)
     for (let i = 0; i < messages.length; ++i)
     {
         messages.eq(i).trigger("click"); // Click the element
+
+        // Wait until the page has rehydrated.
+        await delay(5000);
+
         const result = getFromID();
         await processMessage(result.responseJSON, result.statusText, result);
-        await delay(5000);
     };
 
     // reload the page every 20 minutes to keep the sessions active

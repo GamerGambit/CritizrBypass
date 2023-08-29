@@ -85,6 +85,13 @@ async function processDissatisfactionAlert(json, textStatus, xhr)
         return;
     }
 
+    // DEBUG check that the last item is not a response from us.
+    if (json.hasOwnProperty("last_item") && json.last_item.object.user.username == Critizr.user.username)
+    {
+        console.log(json.id + " | Bailing - We already replied, something has gone wrong.");
+        return;
+    }
+
     // Shortcut case where the customer has left a dissatifaction but no remark.
     // Just mark it as done and bail
     if (!json.last_item.object.hasOwnProperty("remark"))
@@ -147,6 +154,13 @@ async function processMessage(json, textStatus, xhr)
     if (!shouldProcess(json))
     {
         console.log(json.id + " | Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
+        return;
+    }
+
+    // DEBUG check that the last item is not a response from us.
+    if (json.hasOwnProperty("last_item") && json.last_item.object.user.username == Critizr.user.username)
+    {
+        console.log(json.id + " | Bailing - We already replied, something has gone wrong.");
         return;
     }
 

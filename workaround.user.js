@@ -234,7 +234,7 @@ async function processMessage(json)
             await delay(5000); // Wait for the page to rehydrate after choosing feedback type
             
             console.log(json.id + " | Filling out promoter reply");
-            setReplyText(promoterReply.replace("@NAME@", name).replace("@STORE", toTitleCase(json.place.name))); // Fill out reply
+            setReplyText(promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Fill out reply
             document.querySelector(".send-button > button:first-child").click(); // Click send (Should mark as done by default)
             await dismissSpellCheckModal();
         }

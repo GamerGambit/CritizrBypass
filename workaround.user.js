@@ -228,6 +228,7 @@ async function main()
 
     // Dissatisfaction Alerts
     console.log("Checking Dissatisfaction Alerts");
+    let processed = false;
     for (const alert of alerts)
     {
         alert.click(); // Click the element
@@ -237,6 +238,7 @@ async function main()
 
         const result = await getFromID();
         await processDissatisfactionAlert(result);
+        processed |= true;
     };
 
     // Messages (could be positive feedback or replies afaik)
@@ -249,10 +251,16 @@ async function main()
 
         const result = await getFromID();
         await processMessage(result);
+        processed |= true;
     };
 
-    // reload the page every 20 minutes to keep the sessions active
-    await delay(1000 * 60 * 20);
+    // reload the page every 5 minutes to keep the sessions active
+    // and to beat the DPE bot
+    if (!processed)
+    {
+        await delay(1000 * 60 * 5);
+    }
+
     console.log("Refreshing page");
     window.location.replace("https://critizr.com/pro/messages/active/");
 }

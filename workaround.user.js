@@ -21,6 +21,17 @@ const negativeWords = [
     "unhappy", "not happy", "terrible", "cold", "paid", "asked", "extra", "missing", "forgot", "doubt", "poor", "dry", "burnt", "undercooked", "soggy", "lacking", "misleading", "wrong", "pathetic", "dissapoint", "incorrect", "allergic",
     "upset", "cut", "late", "barely", "but", "ordered"
 ];
+const dissatisfactionReply = "Hi @NAME@, thanks for your feedback. One of the management team will review this in the next 24-48 hours. Thank you for your patience.";
+const promoterReply = "Hi @NAME@, we genuinely appreciate your positive feedback and will pass this on to the rest of the team.\n\nKind regards,\n@STORE@";
+
+// https://stackoverflow.com/a/43376967
+const toTitleCase = (phrase) => {
+    return phrase
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
 function getAPIKey()
 {
@@ -100,6 +111,26 @@ function speedyMarkDone()
     document.querySelector("[data-trigger-action='mark_as_done']").click();
 }
 
+async function setReplyText(text)
+{
+    const textarea = document.querySelector("#reply-pane-view-textarea");
+    textarea.value = text;
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+async function dismissSpellCheckModal()
+{
+    if (document.querySelector(".spell-checker"))
+    {
+        console.log(json.id + " | Detected spell checker modal");
+        // Click "Confirm and Send"
+        document.querySelector(".modal-footer button:last-child").click();
+
+        // Wait for the modal to disappear
+        await delay(5000);
+    }
+}
+
 async function processDissatisfactionAlert(json)
 {
     var name = json.last_item.object.user.first_name.trim();
@@ -152,9 +183,7 @@ async function processDissatisfactionAlert(json)
 
     console.log(json.id + " | Filling out reply field");
     // Fill out the reply message
-    const textarea = document.querySelector("#reply-pane-view-textarea");
-    textarea.value = "Hi" + name + ", thanks for your feedback. One of the management team will review this in the next 24-48 hours. Thank you for your patience.";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    setReplyText(dissatisfactionReply.replace("@NAME@", name));
 
     console.log(json.id + " | Toggling hold switch");
     document.querySelector(".toggle-switch-thumb").click(); // Set the reply mode to put the customer on hold
@@ -164,15 +193,7 @@ async function processDissatisfactionAlert(json)
     await delay(5000);
 
     // Spell checker modal
-    if (document.querySelector(".spell-checker"))
-    {
-        console.log(json.id + " | Detected spell checker modal");
-        // Click "Confirm and Send"
-        document.querySelector(".modal-footer button:last-child").click();
-
-        // Wait for the modal to disappear
-        await delay(5000);
-    }
+    await dismissSpellCheckModal();
 }
 
 async function processMessage(json)
@@ -211,10 +232,17 @@ async function processMessage(json)
             console.log(json.id + " | NPS > 8, marking as compliment");
             document.querySelectorAll(".type-chooser .btn-secondary")[FeedbackType.Compliment].click(); // Click "Compliment" type button
             await delay(5000); // Wait for the page to rehydrate after choosing feedback type
+            
+            console.log(json.id + " | Filling out promoter reply");
+            setReplyText(promoterReply.replace("@NAME@", name).replace("@STORE", toTitleCase(json.place.name))); // Fill out reply
+            document.querySelector(".send-button > button:first-child").click(); // Click send (Should mark as done by default)
+            await dismissSpellCheckModal();
         }
-
-        console.log(json.id + " | Marking as done");
-        speedyMarkDone();
+        else
+        {
+            console.log(json.id + " | Marking as done");
+            speedyMarkDone();
+        }
     }
 
     // Wait for the page to update before returning

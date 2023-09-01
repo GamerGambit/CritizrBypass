@@ -120,9 +120,12 @@ async function setReplyText(text)
 
 async function dismissSpellCheckModal()
 {
+    // Potentially wait for the spell checker modal
+    await delay(5000);
+    console.log("Checking for spell check modal..." + document.querySelector(".spell-checker"));
     if (document.querySelector(".spell-checker"))
     {
-        console.log(json.id + " | Detected spell checker modal");
+        console.log("Detected spell checker modal");
         // Click "Confirm and Send"
         document.querySelector(".modal-footer button:last-child").click();
 
@@ -200,11 +203,6 @@ async function processDissatisfactionAlert(json)
     console.log(json.id + " | Toggling hold switch");
     document.querySelector(".toggle-switch-thumb").click(); // Set the reply mode to put the customer on hold
     document.querySelector(".send-button > button:first-child").click(); // Click "Send and put on hold" button.
-
-    // Potentially wait for the spell checker modal
-    await delay(5000);
-
-    // Spell checker modal
     await dismissSpellCheckModal();
 }
 

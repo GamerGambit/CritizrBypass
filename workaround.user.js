@@ -9,6 +9,8 @@
 // @grant        none
 // ==/UserScript==
 
+'use strict';
+
 const FeedbackType = {
     Issue: 0,
     Compliment: 1,
@@ -317,8 +319,6 @@ async function main()
 }
 
 (async function() {
-    'use strict';
-
     console.log("Loaded Page, checking auth");
 
     let proceed = await confirmAuth();

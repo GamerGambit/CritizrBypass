@@ -98,8 +98,8 @@ function isPotentiallyNegativeMessage(json)
     if (json.last_item.object.hasOwnProperty("survey_participation"))
     {
         console.log(json.id + " | IPNM | Has participation...");
-        // No questions marked as triggering a dissatisfaction (for NPS > 8
-        if (json.last_item.object.survey_participation.answer_triggering_alert === null)
+        // NPS > 8 (promoter)
+        if (json.last_item.object.survey_participation.answer_to_highlight.value > 8)
         {
             console.log(json.id + " | IPNM | NPS > 8 (No answer triggering alert)");
             return false;

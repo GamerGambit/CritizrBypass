@@ -65,7 +65,7 @@ async function confirmAuth()
 
         // Cancel clicked, stop pestering.
         if (apikey === null)
-            return;
+            return false;
     }
 
     // Make sure there is at least 1 store registered to this key.
@@ -77,13 +77,13 @@ async function confirmAuth()
     if (!response.ok || json.length == 0)
     {
         alert("Invalid API Key");
-        confirmAuth();
-        return;
+        return confirmAuth();
     }
 
     // We have stores, so assign them to `storeids`
     storeids = json;
     putAPIKey(apikey);
+    return true;
 }
 
 function isPotentiallyNegativeMessage(json)
@@ -321,11 +321,18 @@ async function main()
 
     console.log("Loaded Page, checking auth");
 
-    await confirmAuth();
+    let proceed = await confirmAuth();
 
-    console.log("Automating feedback for store ids: " + storeids.join(", "));
+    if (proceed)
+    {
+        console.log("Automating feedback for store ids: " + storeids.join(", "));
 
-    // Check everything after 5 seconds.. hopefully this is enough time for critizr to load everything behind the scenes
-    await delay(5000);
-    await main();
+        // Check everything after 5 seconds.. hopefully this is enough time for critizr to load everything behind the scenes
+        await delay(5000);
+        await main();
+    }
+    else
+    {
+        console.log("Authentication failed, this script will not run.");
+    }
 })();

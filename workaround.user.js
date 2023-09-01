@@ -90,15 +90,23 @@ function isPotentiallyNegativeMessage(json)
 {
     // No remark. This happens if they filled out the survey and didnt leave a remark
     if (!json.last_item.object.hasOwnProperty("remark"))
+    {
+        console.log(json.id + " | IPNM | No Remark");
         return false;
+    }
 
     if (json.last_item.object.hasOwnProperty("survey_participation"))
     {
+        console.log(json.id + " | IPNM | Has participation...");
         // No questions marked as triggering a dissatisfaction (for NPS > 8
         if (json.last_item.object.survey_participation.answer_triggering_alert === null)
+        {
+            console.log(json.id + " | IPNM | NPS > 8 (No answer triggering alert)");
             return false;
+        }
     }
 
+    console.log(json.id + " | IPNM | Checking for keywords [" + json.last_item.object.remark.content + "]");
     return negativeWords.some(w => json.last_item.object.remark.content.toLowerCase().includes(w));
 }
 

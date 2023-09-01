@@ -131,6 +131,19 @@ async function dismissSpellCheckModal()
     }
 }
 
+async function selectFeedbackType(type)
+{
+    let buttons = document.querySelectorAll(".type-chooser .btn-secondary");
+
+    if (buttons.length == 0)
+        return;
+
+    buttons[type].click();
+
+    // Wait for the page to rehydrate after choosing feedback type
+    await delay(5000);
+}
+
 async function processDissatisfactionAlert(json)
 {
     var name = json.last_item.object.user.first_name.trim();
@@ -171,8 +184,7 @@ async function processDissatisfactionAlert(json)
     if (document.querySelector(".btn-howto"))
     {
         console.log(json.id + " | Setting feedback type to \"Issue\"");
-        document.querySelector(".type-chooser .btn-secondary:first-child").click(); // Click "Issue" type button
-        await delay(5000);
+        await selectFeedbackType(FeedbackType.Issue); // Click "Issue" type button
     }
 
     console.log(json.id + " | Clicking Reply");
@@ -230,8 +242,7 @@ async function processMessage(json)
         if (json.last_item.object.hasOwnProperty("survey_participation") && json.last_item.object.survey_participation.answer_to_highlight.value > 8)
         {
             console.log(json.id + " | NPS > 8, marking as compliment");
-            document.querySelectorAll(".type-chooser .btn-secondary")[FeedbackType.Compliment].click(); // Click "Compliment" type button
-            await delay(5000); // Wait for the page to rehydrate after choosing feedback type
+            await selectFeedbackType(FeedbackType.Compliment); // Click "Compliment" type button
             
             console.log(json.id + " | Filling out promoter reply");
             setReplyText(promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Fill out reply

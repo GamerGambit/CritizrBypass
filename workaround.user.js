@@ -260,6 +260,12 @@ async function processMessage(json)
 
 async function main()
 {
+    while (document.querySelector("div.alert-navs-region > div > nav") === null || document.querySelector("div.need-or-should-reply-navs-region > div > nav") === null)
+    {
+        console.log("Page not ready, waiting another second");
+        await delay(1000);
+    }
+
     const alerts = document.querySelector("div.alert-navs-region > div > nav").children;
     const messages = document.querySelector("div.need-or-should-reply-navs-region > div > nav").children;
 

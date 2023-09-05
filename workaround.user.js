@@ -329,7 +329,18 @@ async function main()
 
         // Check everything after 5 seconds.. hopefully this is enough time for critizr to load everything behind the scenes
         await delay(5000);
-        await main();
+        try
+        {
+            await main();
+        }
+        catch (e)
+        {
+            console.log(e);
+            await delay(10000); // wait 10 seconds so we dont spam, if the error happens immediately after the script is active
+        }
+
+        console.log("Refreshing page");
+        window.location.replace("https://critizr.com/pro/messages/active/");
     }
     else
     {

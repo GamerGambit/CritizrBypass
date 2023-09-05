@@ -146,7 +146,7 @@ async function dismissSpellCheckModal()
 
 async function selectFeedbackType(type)
 {
-    let buttons = document.querySelectorAll(".type-chooser .btn-secondary");
+    let buttons = document.querySelectorAll(".conversation-item:last-child .type-chooser .btn-secondary");
 
     if (buttons.length == 0)
         return;

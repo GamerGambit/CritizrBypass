@@ -272,6 +272,13 @@ async function main()
 {
     while (document.querySelector("div.alert-navs-region > div > nav") === null || document.querySelector("div.need-or-should-reply-navs-region > div > nav") === null)
     {
+        // If Critizr is reporting some error, bail and refresh the page after 5 seconds.
+        if (document.querySelector(".error-view"))
+        {
+            await delay(5000);
+            return;
+        }
+
         console.log("Page not ready, waiting another second");
         await delay(1000);
     }

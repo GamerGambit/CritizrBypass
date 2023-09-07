@@ -37,10 +37,7 @@ const toTitleCase = (phrase) => {
 
 async function log(str, flush)
 {
-    if (str)
-    {
-        console.log(str);
-    }
+    console.log(str);
 }
 
 function getAPIKey()
@@ -288,17 +285,16 @@ async function processMessage(json)
             log(json.id + " | NPS > 8, marking as compliment");
             await setFeedbackType(json, FeedbackId.Compliment); // Set feeback type to "Compliment"
 
-            log(json.id + " | Sending promoter reply");
+            log(json.id + " | Sending promoter reply", true);
             await sendReply(json, promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Send reply
         }
         else
         {
-            log(json.id + " | Marking as done");
+            log(json.id + " | Marking as done", true);
             await markDone(json);
         }
     }
 
-    log(null, true);
 }
 
 async function main()

@@ -221,7 +221,7 @@ async function processDissatisfactionAlert(json)
     if (!json.last_item.object.hasOwnProperty("remark"))
     {
         log(json.id + " | No remark, marking as done", true);
-        await markDone();
+        await markDone(json);
         return;
     }
 

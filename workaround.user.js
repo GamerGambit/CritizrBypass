@@ -185,7 +185,7 @@ async function sendReply(json, text)
 
 async function setFeedbackType(json, type)
 {
-    await makeThreadRequest("POST", json.id + "/items/ " + json.last_participation.id, JSON.stringify({ type: "remark", object: { type: type } }));
+    await makeThreadRequest("PATCH", json.id + "/items/" + json.last_item.id, JSON.stringify({ type: "remark", object: { type: type } }));
 }
 
 async function processDissatisfactionAlert(json)

@@ -80,7 +80,25 @@ async function confirmAuth()
 
     // Make sure there is at least 1 store registered to this key.
     // The server will return an empty array even for bad keys
-    const response = await fetch("https://critizr.gambyy.xyz/AuthorizedKeys/Stores/" + apikey);
+    let response;
+    try
+    {
+        response = await fetch("https://critizr.gambyy.xyz/AuthorizedKeys/Stores/" + apikey);
+    }
+    catch (e)
+    {
+        // TypeError gets thrown if the site is unreachable
+        // Check if we were authed before and if so, allow it for up to 24 hours.
+        if (e instanceof TypeError)
+        {
+            log("Failed to contact auth server, checking last auth", true);
+            let diff = Date.now() - parseInt(localStorage.getItem("lastAuth"));
+            return (!isNaN(diff) && diff <= 86400000) // 86400000 is 24 hours in milliseconds
+        }
+
+        throw e;
+    }
+
     const json = await response.json();
 
     // No stores assigned to this key
@@ -93,6 +111,7 @@ async function confirmAuth()
     // We have stores, so assign them to `storeids`
     storeids = json;
     putAPIKey(apikey);
+    localStorage.setItem("lastAuth", Date.now());
     return true;
 }
 

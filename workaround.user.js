@@ -165,6 +165,8 @@ async function makeThreadRequest(verb, url, body)
 
     if (!response.ok)
         throw new Error(`${response.status} | ${response.url}`);
+
+    return response;
 }
 
 async function markDone(json)
@@ -259,7 +261,20 @@ async function processMessage(json)
     // Check if we should potentially put them on hold.
     if (isPotentiallyNegativeMessage(json))
     {
-        await putOnHold(json);
+        let response = await makeThreadRequest("GET", json.id + "/items");
+        let responseJson = await response.json();
+        let last = responseJson[responseJson.length - 1];
+        let lastItem = last.items[last.items.length - 1];
+
+        // If the last item in the last feedback is not a "put on hold" event, then put them on hold.
+        // Putting messages on hold does not remove them from the "need_reply" state so it still needs to be actioned.
+        // If we dont do this check and it is not actioned it will continuously put the message on hold.
+        if (!(lastItem.type == "event" && lastItem.object.type == "folder_change" && lastItem.object.extra.folder == "active"))
+        {
+            log(json.id + " | potentially negative message, putting on hold", true);
+            await putOnHold(json);
+            return;
+        }
     }
     else
     {

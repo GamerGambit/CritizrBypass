@@ -185,6 +185,11 @@ async function sendReply(json, text)
     await makeThreadRequest("POST", json.id + "/items", JSON.stringify({ type: type, object: { content: text } }));
 }
 
+async function addInternalNode(json, text)
+{
+    await makeThreadRequest("POST", json.id + "/items", JSON.stringify({"type": "note", "object": { "content": text } }));
+}
+
 async function setFeedbackType(json, type)
 {
     await makeThreadRequest("PATCH", json.id + "/items/" + json.last_item.id, JSON.stringify({ type: "remark", object: { type: type } }));

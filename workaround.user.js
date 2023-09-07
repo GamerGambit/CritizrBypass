@@ -11,11 +11,11 @@
 
 'use strict';
 
-const FeedbackType = {
-    Issue: 0,
-    Compliment: 1,
-    Question: 2,
-    Suggestion: 3
+const FeedbackId = {
+    Issue: "pb",
+    Compliment: "thx",
+    Question: "faq",
+    Suggestion: "id"
 };
 
 let storeids = [];
@@ -34,6 +34,14 @@ const toTitleCase = (phrase) => {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
+
+async function log(str, flush)
+{
+    if (str)
+    {
+        console.log(str);
+    }
+}
 
 function getAPIKey()
 {
@@ -88,80 +96,84 @@ async function confirmAuth()
     return true;
 }
 
-function isPotentiallyNegativeMessage(json)
-{
-    // No remark. This happens if they filled out the survey and didnt leave a remark
-    if (!json.last_item.object.hasOwnProperty("remark"))
-    {
-        console.log(json.id + " | IPNM | No Remark");
-        return false;
-    }
-
-    if (json.last_item.object.hasOwnProperty("survey_participation"))
-    {
-        console.log(json.id + " | IPNM | Has participation...");
-        // NPS > 8 (promoter)
-        if (json.last_item.object.survey_participation.answer_to_highlight.value > 8)
-        {
-            console.log(json.id + " | IPNM | NPS > 8 (No answer triggering alert)");
-            return false;
-        }
-    }
-
-    console.log(json.id + " | IPNM | Checking for keywords [" + json.last_item.object.remark.content + "]");
-    return negativeWords.some(w => json.last_item.object.remark.content.toLowerCase().includes(w));
-}
-
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function speedyMarkDone()
+function isPotentiallyNegativeMessage(json)
 {
-    document.querySelector("[data-trigger-action='mark_as_done']").click();
-}
+    let remark = getRemark(json);
 
-async function setReplyText(text)
-{
-    const textarea = document.querySelector("#reply-pane-view-textarea");
-    textarea.value = text;
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-async function dismissSpellCheckModal()
-{
-    // Potentially wait for the spell checker modal
-    await delay(5000);
-    console.log("Checking for spell check modal..." + document.querySelector(".spell-checker"));
-    if (document.querySelector(".spell-checker"))
+    // No remark. This happens if they filled out the survey and didnt leave a remark
+    if (!remark)
     {
-        console.log("Detected spell checker modal");
-        // Click "Confirm and Send"
-        document.querySelector(".modal-footer button:last-child").click();
-
-        // Wait for the modal to disappear
-        await delay(5000);
+        log(json.id + " | IPNM | No Remark");
+        return false;
     }
+
+    // If they have a survey participation that is NOT from something like Google Reviews
+    if (json.last_item.object.hasOwnProperty("survey_participation") && !json.last_item.object.hasOwnProperty("external_review"))
+    {
+        log(json.id + " | IPNM | Has participation...");
+        // NPS > 8 (promoter)
+        if (json.last_item.object.survey_participation.answer_to_highlight.value > 8)
+        {
+            log(json.id + " | IPNM | NPS > 8 (No answer triggering alert)", true);
+            return false;
+        }
+    }
+
+    log(json.id + " | IPNM | Checking for keywords [" + remark + "]", true);
+    return negativeWords.some(w => remark.toLowerCase().includes(w));
 }
 
-async function selectFeedbackType(type)
+function getRemark(json)
 {
-    let buttons = document.querySelectorAll(".conversation-item:last-child .type-chooser .btn-secondary");
+    if (json.last_item.object.hasOwnProperty("external_review"))
+        return json.last_item.object.external_review.content;
 
-    if (buttons.length == 0)
-        return;
+    if (json.last_item.object.hasOwnProperty("remark"))
+        return json.last_item.object.remark.content;
+}
 
-    buttons[type].click();
+async function makeThreadRequest(verb, url, body)
+{
+    let response = await fetch(`https://critizr.com/bo/api/v2/threads/${url}`, {
+        method: verb,
+        headers: { "Content-Type": "application/json" },
+        body: body
+    });
 
-    // Wait for the page to rehydrate after choosing feedback type
-    await delay(5000);
+    if (!response.ok)
+        throw new Error(`${response.status} | ${response.url}`);
+}
+
+async function markDone(json)
+{
+    await makeThreadRequest("POST", json.id + "/items", '{"type":"event","object":{"type":"folder_change","extra":{"folder":"done","is_subordinate":false}}}');
+}
+
+async function putOnHold(json)
+{
+    await makeThreadRequest("POST", json.id + "/items", '{"type":"event","object":{"type":"folder_change","extra":{"folder":"active","is_subordinate":true}}}');
+}
+
+async function sendReply(json, text)
+{
+    let type = json.folder == "active" ? "answer" : "pro_message";
+    await makeThreadRequest("POST", json.id + "/items", JSON.stringify({ type: type, object: { content: text } }));
+}
+
+async function setFeedbackType(json, type)
+{
+    await makeThreadRequest("POST", json.id + "/items/ " + json.last_participation.id, JSON.stringify({ type: "remark", object: { type: type } }));
 }
 
 async function processDissatisfactionAlert(json)
 {
     var name = json.last_item.object.user.first_name.trim();
     const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at)) / 1000); // how old this dissatisfaction is in seconds
-    console.log(json.id + " | Detected dissatisfaction from " + name + " | Age: " + age + "s");
+    log(json.id + " | Detected dissatisfaction from " + name + " | Age: " + age + "s");
 
     // Sometimes a name is not provided and we get an email instead.
     // Prepend a space so we can do "Hi{name}" and it will look good
@@ -172,14 +184,14 @@ async function processDissatisfactionAlert(json)
 
     if (!shouldProcess(json))
     {
-        console.log(json.id + " | Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
+        log(json.id + " | Ignoring. " + json.place.external_id + " not in " + storeids.join(", "), true);
         return;
     }
 
     // DEBUG check that the last item is not a response from us.
     if (json.hasOwnProperty("last_item") && json.last_item.object.user.username == Critizr.user.username)
     {
-        console.log(json.id + " | Bailing - We already replied, something has gone wrong.");
+        log(json.id + " | Bailing - We already replied, something has gone wrong.", true);
         return;
     }
 
@@ -187,33 +199,19 @@ async function processDissatisfactionAlert(json)
     // Just mark it as done and bail
     if (!json.last_item.object.hasOwnProperty("remark"))
     {
-        console.log(json.id + " | No remark, marking as done");
-        speedyMarkDone();
+        log(json.id + " | No remark, marking as done", true);
+        await markDone();
         return;
     }
 
     // Feedback needs a "type" (issue, compliment, suggestion, question)
     // For dissatisfaction, always select "issue"
-    if (document.querySelector(".btn-howto"))
-    {
-        console.log(json.id + " | Setting feedback type to \"Issue\"");
-        await selectFeedbackType(FeedbackType.Issue); // Click "Issue" type button
-    }
+    log(json.id + " | Setting feedback type to \"Issue\"");
+    await setFeedbackType(json, FeedbackId.Issue);
 
-    console.log(json.id + " | Clicking Reply");
-    document.querySelector("[data-trigger-action='reply']").click(); // Click "Reply"
-
-    // We cant fill out the reply immediately after clicking "Reply" so wait.
-    await delay(5000);
-
-    console.log(json.id + " | Filling out reply field");
+    log(json.id + " | Sending reply", true);
     // Fill out the reply message
-    setReplyText(dissatisfactionReply.replace("@NAME@", name));
-
-    console.log(json.id + " | Toggling hold switch");
-    document.querySelector(".toggle-switch-thumb").click(); // Set the reply mode to put the customer on hold
-    document.querySelector(".send-button > button:first-child").click(); // Click "Send and put on hold" button.
-    await dismissSpellCheckModal();
+    await sendReply(json, dissatisfactionReply.replace("@NAME@", name));
 }
 
 async function processMessage(json)
@@ -224,133 +222,110 @@ async function processMessage(json)
 
     const name = json.last_item.object.user.first_name.trim();
     const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at)) / 1000); // how old this message is in seconds
-    console.log(json.id + " | Detected message from " + name + " | Age: " + age + "s");
+    log(json.id + " | Detected message from " + name + " | Age: " + age + "s");
 
     if (!shouldProcess(json))
     {
-        console.log(json.id + " | Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
+        log(json.id + " | Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
         return;
     }
 
     // DEBUG check that the last item is not a response from us.
     if (json.hasOwnProperty("last_item") && json.last_item.object.user.username == Critizr.user.username)
     {
-        console.log(json.id + " | Bailing - We already replied, something has gone wrong.");
+        log(json.id + " | Bailing - We already replied, something has gone wrong.", true);
         return;
     }
 
     // Check if we should potentially put them on hold.
     if (isPotentiallyNegativeMessage(json))
     {
-        console.log(json.id + " | Potentially negative message, putting on hold.");
-        document.querySelector("[data-trigger-action='mark_as_active']").click()
+        await putOnHold(json);
     }
     else
     {
-        if (json.last_item.object.hasOwnProperty("survey_participation") && json.last_item.object.survey_participation.answer_to_highlight.value > 8)
+        if (json.last_item.object.hasOwnProperty("survey_participation") && !json.last_item.object.hasOwnProperty("external_review") && json.last_item.object.survey_participation.answer_to_highlight.value > 8)
         {
-            console.log(json.id + " | NPS > 8, marking as compliment");
-            await selectFeedbackType(FeedbackType.Compliment); // Click "Compliment" type button
-            
-            console.log(json.id + " | Filling out promoter reply");
-            setReplyText(promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Fill out reply
-            document.querySelector(".send-button > button:first-child").click(); // Click send (Should mark as done by default)
-            await dismissSpellCheckModal();
+            log(json.id + " | NPS > 8, marking as compliment");
+            await setFeedbackType(json, FeedbackId.Compliment); // Set feeback type to "Compliment"
+
+            log(json.id + " | Sending promoter reply");
+            await sendReply(json, promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Send reply
         }
         else
         {
-            console.log(json.id + " | Marking as done");
-            speedyMarkDone();
+            log(json.id + " | Marking as done");
+            await markDone(json);
         }
     }
 
-    // Wait for the page to update before returning
-    await delay(5000);
+    log(null, true);
 }
 
 async function main()
 {
-    while (document.querySelector("div.alert-navs-region > div > nav") === null || document.querySelector("div.need-or-should-reply-navs-region > div > nav") === null)
+    // If Critizr is reporting some error, bail and refresh the page after 5 seconds.
+    if (document.querySelector(".error-view"))
     {
-        // If Critizr is reporting some error, bail and refresh the page after 5 seconds.
-        if (document.querySelector(".error-view"))
-        {
-            await delay(5000);
-            return;
-        }
-
-        console.log("Page not ready, waiting another second");
-        await delay(1000);
+        log("Critizr error. Retrying in 5 seconds", true);
+        await delay(5000);
+        return;
     }
 
-    const alerts = document.querySelector("div.alert-navs-region > div > nav").children;
-    const messages = document.querySelector("div.need-or-should-reply-navs-region > div > nav").children;
+    log("Checking Dissatisfaction Alerts and Messages", true);
+    var response = await fetch("https://critizr.com/bo/api/v2/threads?folder=active&state=need_reply&state=alert&sort=-last_item_created_at");
 
-    // Dissatisfaction Alerts
-    console.log("Checking Dissatisfaction Alerts");
-    let processed = false;
-    for (const alert of alerts)
+    if (!response.ok)
     {
-        alert.click(); // Click the element
-
-        // Wait until the page has rehydrated.
+        log(`Error code ${response.status} when fetching alerts and messages. Retrying in 5 seconds`, true);
         await delay(5000);
+        return;
+    }
 
-        const result = await getFromID();
-        await processDissatisfactionAlert(result);
-        processed |= true;
-    };
+    var json = await response.json();
 
-    // Messages (could be positive feedback or replies afaik)
-    for (const message of messages)
+    for (const result of json.results)
     {
-        message.click(); // Click the element
+        if (result.state == "alert")
+        {
+            await processDissatisfactionAlert(result);
+        }
+        else
+        {
+            await processMessage(result);
+        }
+    }
 
-        // Wait until the page has rehydrated.
-        await delay(5000);
-
-        const result = await getFromID();
-        await processMessage(result);
-        processed |= true;
-    };
-
-    // reload the page every 5 minutes to keep the sessions active
-    // and to beat the DPE bot
-    if (!processed)
+    if (json.results.length == 0)
     {
+        log("No feedbacks to process, checking again in 5 minutes", true);
         await delay(1000 * 60 * 5);
     }
-
-    console.log("Refreshing page");
-    window.location.replace("https://critizr.com/pro/messages/active/");
 }
 
 (async function() {
-    console.log("Loaded Page, checking auth");
+    log("Loaded Page, checking auth");
 
     let proceed = await confirmAuth();
-
     if (proceed)
     {
-        console.log("Automating feedback for store ids: " + storeids.join(", "));
+        log("Automating feedback for store ids: " + storeids.join(", "), true);
 
-        // Check everything after 5 seconds.. hopefully this is enough time for critizr to load everything behind the scenes
-        await delay(5000);
         try
         {
             await main();
         }
         catch (e)
         {
-            console.log(e);
+            log(e);
             await delay(10000); // wait 10 seconds so we dont spam, if the error happens immediately after the script is active
         }
 
-        console.log("Refreshing page");
+        log("Refreshing page", true);
         window.location.replace("https://critizr.com/pro/messages/active/");
     }
     else
     {
-        console.log("Authentication failed, this script will not run.");
+        log("Authentication failed, this script will not run.", true);
     }
 })();

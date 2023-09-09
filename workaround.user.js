@@ -20,7 +20,7 @@ const FeedbackId = {
 
 let storeids = [];
 const negativeWords = [
-    "unhappy", "not happy", "terrible", "cold", "paid", "asked", "extra", "missing", "forgot", "doubt", "poor", "dry", "burnt", "undercooked", "soggy", "lacking", "misleading", "wrong", "pathetic", "dissapoint", "incorrect", "allergic",
+    "unhappy", "not happy", "terrible", "cold", "paid", "asked", "extra", "missing", "forgot", "doubt", "poor", "dry", "burnt", "undercooked", "soggy", "lacking", "misleading", "wrong", "pathetic", "disappoint", "incorrect", "allergic",
     "upset", "cut", "late", "barely", "but", "ordered", "mistake", "dissatisfied"
 ];
 const dissatisfactionReply = "Hi @NAME@, thanks for your feedback. One of the management team will review this in the next 24-48 hours. Thank you for your patience.";

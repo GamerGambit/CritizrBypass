@@ -208,14 +208,14 @@ async function processDissatisfactionAlert(json)
     if (!shouldProcess(json))
     {
         log(json.id + " | Ignoring. " + json.place.external_id + " not in " + storeids.join(", "), true);
-        return;
+        return false;
     }
 
     // DEBUG check that the last item is not a response from us.
     if (json.hasOwnProperty("last_item") && json.last_item.object.user.username == Critizr.user.username)
     {
         log(json.id + " | Bailing - We already replied, something has gone wrong.", true);
-        return;
+        return false;
     }
 
     // Shortcut case where the customer has left a dissatifaction but no remark.
@@ -224,7 +224,7 @@ async function processDissatisfactionAlert(json)
     {
         log(json.id + " | No remark, marking as done", true);
         await markDone(json);
-        return;
+        return true;
     }
 
     // Feedback needs a "type" (issue, compliment, suggestion, question)
@@ -235,13 +235,15 @@ async function processDissatisfactionAlert(json)
     log(json.id + " | Sending reply", true);
     // Fill out the reply message
     await sendReply(json, dissatisfactionReply.replace("@NAME@", name));
+
+    return true;
 }
 
 async function processMessage(json)
 {
     // Messages not marked as "need_reply" can be ignored.. probably.
     if (json.state != "need_reply")
-        return;
+        return false;
 
     const name = json.last_item.object.user.first_name.trim();
     const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at)) / 1000); // how old this message is in seconds
@@ -250,14 +252,14 @@ async function processMessage(json)
     if (!shouldProcess(json))
     {
         log(json.id + " | Ignoring. " + json.place.external_id + " not in " + storeids.join(", "));
-        return;
+        return false;
     }
 
     // DEBUG check that the last item is not a response from us.
     if (json.hasOwnProperty("last_item") && json.last_item.object.user.username == Critizr.user.username)
     {
         log(json.id + " | Bailing - We already replied, something has gone wrong.", true);
-        return;
+        return false;
     }
 
     // Check if we should potentially put them on hold.
@@ -275,7 +277,7 @@ async function processMessage(json)
         {
             log(json.id + " | potentially negative message, putting on hold", true);
             await putOnHold(json);
-            return;
+            return true;
         }
     }
     else
@@ -293,8 +295,11 @@ async function processMessage(json)
             log(json.id + " | Marking as done", true);
             await markDone(json);
         }
+
+        return true;
     }
 
+    return false;
 }
 
 async function main()
@@ -319,19 +324,20 @@ async function main()
 
     var json = await response.json();
 
+    let processed = false;
     for (const result of json.results)
     {
         if (result.state == "alert")
         {
-            await processDissatisfactionAlert(result);
+            processed |= await processDissatisfactionAlert(result);
         }
         else
         {
-            await processMessage(result);
+            processed |= await processMessage(result);
         }
     }
 
-    if (json.results.length == 0)
+    if (json.results.length == 0 || !processed)
     {
         log("No feedbacks to process, checking again in 5 minutes", true);
         await delay(1000 * 60 * 5);

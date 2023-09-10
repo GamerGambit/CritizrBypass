@@ -25,6 +25,7 @@ const negativeWords = [
 ];
 const dissatisfactionReply = "Hi @NAME@, thanks for your feedback. One of the management team will review this in the next 24-48 hours. Thank you for your patience.";
 const promoterReply = "Hi @NAME@, we genuinely appreciate your positive feedback and will pass this on to the rest of the team.\n\nKind regards,\n@STORE@";
+const pnmReply = "Hi @NAME@, thank you for your feedback. This will be shared with the management team.";
 
 // https://stackoverflow.com/a/43376967
 const toTitleCase = (phrase) => {
@@ -276,6 +277,9 @@ async function processMessage(json)
         if (!(lastItem.type == "event" && lastItem.object.type == "folder_change" && lastItem.object.extra.folder == "active"))
         {
             log(json.id + " | potentially negative message, putting on hold", true);
+            // Putting messages on hold does not remove the `need_reply` state, so we need to send a message first.
+            // This message should be generic in case the feedback is not negative, but should work if it is negative.
+            await sendReply(json, pnmReply.replace("@NAME@", name)); // Send a generic message
             await putOnHold(json);
             return true;
         }

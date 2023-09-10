@@ -291,16 +291,12 @@ async function processMessage(json)
             log(json.id + " | NPS > 8, marking as compliment");
             await setFeedbackType(json, FeedbackId.Compliment); // Set feeback type to "Compliment"
 
-            log(json.id + " | Sending promoter reply", true);
+            log(json.id + " | Sending promoter reply");
             await sendReply(json, promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Send reply
-            await putOnHold(json);
-        }
-        else
-        {
-            log(json.id + " | Marking as done", true);
-            await markDone(json);
         }
 
+        log(json.id + " | Marking as done", true);
+        await markDone(json);
         return true;
     }
 

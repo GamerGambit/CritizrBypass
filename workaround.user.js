@@ -345,28 +345,32 @@ async function main()
 }
 
 (async function() {
-    log("Loaded Page, checking auth");
+    log("Loaded Page at " + new Date(Date.now()) + ", checking auth");
 
-    let proceed = await confirmAuth();
-    if (proceed)
+    while (true)
     {
-        log("Automating feedback for store ids: " + storeids.join(", "), true);
-
-        try
+        let proceed = await confirmAuth();
+        if (proceed)
         {
-            await main();
-        }
-        catch (e)
-        {
-            log(e);
-            await delay(10000); // wait 10 seconds so we dont spam, if the error happens immediately after the script is active
-        }
+            log("Automating feedback for store ids: " + storeids.join(", "), true);
 
-        log("Refreshing page", true);
-        window.location.replace("https://critizr.com/pro/messages/active/");
-    }
-    else
-    {
-        log("Authentication failed, this script will not run.", true);
+            try
+            {
+                await main();
+            }
+            catch (e)
+            {
+                log(`Exception thrown: ${e} | ${e.stack}`);
+                await delay(10000); // wait 10 seconds so we dont spam, if the error happens immediately after the script is active
+            }
+
+            log("Refreshing page", true);
+            //window.location.replace("https://critizr.com/pro/messages/active/");
+        }
+        else
+        {
+            log("Authentication failed, trying again in 10 minutes.", true);
+            await delay(1000 * 60 * 30); // retry again in 10 minutes
+        }
     }
 })();

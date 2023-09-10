@@ -289,6 +289,7 @@ async function processMessage(json)
 
             log(json.id + " | Sending promoter reply", true);
             await sendReply(json, promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Send reply
+            await putOnHold(json);
         }
         else
         {

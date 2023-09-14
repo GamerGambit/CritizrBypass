@@ -242,6 +242,18 @@ async function processMessage(json)
     if (json.state != "need_reply")
         return false;
 
+    {
+        let response = await makeThreadRequest("GET", json.id + "/items");
+        let responseJson = await response.json();
+        let last = responseJson[responseJson.length - 1];
+        let lastItem = last.items[last.items.length - 1];
+
+        // Type will be a participation for all feedbacks including external reviews like google.
+        // Internal stuff like replies, marking done and putting on hold are not participations.
+        if (lastItem.type != "participation")
+            return;
+    }
+
     const name = json.last_item.object.user.first_name.trim();
     const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at)) / 1000); // how old this message is in seconds
     log(json.id + " | Detected message from " + name + " | Age: " + age + "s");
@@ -262,23 +274,12 @@ async function processMessage(json)
     // Check if we should potentially put them on hold.
     if (isPotentiallyNegativeMessage(json))
     {
-        let response = await makeThreadRequest("GET", json.id + "/items");
-        let responseJson = await response.json();
-        let last = responseJson[responseJson.length - 1];
-        let lastItem = last.items[last.items.length - 1];
-
-        // If the last item in the last feedback is not a "put on hold" event, then put them on hold.
-        // Putting messages on hold does not remove them from the "need_reply" state so it still needs to be actioned.
-        // If we dont do this check and it is not actioned it will continuously put the message on hold.
-        if (!(lastItem.type == "event" && lastItem.object.type == "folder_change" && lastItem.object.extra.folder == "active"))
-        {
-            log(json.id + " | potentially negative message, putting on hold", true);
-            // Putting messages on hold does not remove the `need_reply` state, so we need to send a message first.
-            // This message should be generic in case the feedback is not negative, but should work if it is negative.
-            await sendReply(json, pnmReply.replace("@NAME@", name)); // Send a generic message
-            await putOnHold(json);
-            return true;
-        }
+        log(json.id + " | potentially negative message, putting on hold", true);
+        // Putting messages on hold does not remove the `need_reply` state, so we need to send a message first.
+        // This message should be generic in case the feedback is not negative, but should work if it is negative.
+        await sendReply(json, pnmReply.replace("@NAME@", name)); // Send a generic message
+        await putOnHold(json);
+        return true;
     }
     else
     {

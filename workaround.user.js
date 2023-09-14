@@ -128,12 +128,12 @@ function isPotentiallyNegativeMessage(json)
         // NPS > 8 (promoter)
         if (json.last_item.object.survey_participation.answer_to_highlight.value > 8)
         {
-            log(json.id + " | IPNM | NPS > 8 (No answer triggering alert)", true);
+            log(json.id + " | IPNM | NPS > 8 (No answer triggering alert)");
             return false;
         }
     }
 
-    log(json.id + " | IPNM | Checking for keywords [" + remark + "]", true);
+    log(json.id + " | IPNM | Checking for keywords [" + remark + "]");
     return negativeWords.some(w => remark.toLowerCase().includes(w));
 }
 

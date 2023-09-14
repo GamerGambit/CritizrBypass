@@ -226,9 +226,12 @@ async function processDissatisfactionAlert(json)
     log(json.id + " | Setting feedback type to \"Issue\"");
     await setFeedbackType(json, FeedbackId.Issue);
 
-    log(json.id + " | Sending reply", true);
+    log(json.id + " | Sending reply");
     // Fill out the reply message
     await sendReply(json, dissatisfactionReply.replace("@NAME@", name));
+
+    log(json.id + " | Putting on hold", true);
+    await putOnHold(json);
 
     return true;
 }

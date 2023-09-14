@@ -162,7 +162,7 @@ async function makeThreadRequest(verb, url, body)
 
 async function markDone(json)
 {
-    await makeThreadRequest("POST", json.id + "/items", '{"type":"event","object":{"type":"folder_change","extra":{"folder":"done","is_subordinate":false}}}');
+    await makeThreadRequest("POST", json.id + "/items", '{"type":"event","object":{"type":"folder_change","extra":{"folder":"done","is_subordinate":true}}}');
 }
 
 async function putOnHold(json)

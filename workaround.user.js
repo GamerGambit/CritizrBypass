@@ -52,13 +52,6 @@ function putAPIKey(key)
     localStorage.setItem("apikey", key);
 }
 
-async function getFromID()
-{
-    const id = location.pathname.split("/")[4];
-    const response = await fetch("https://critizr.com/bo/api/v2/threads/" + id);
-    return await response.json();
-}
-
 function shouldProcess(json)
 {
     return storeids.includes(parseInt(json.place.external_id, 10));

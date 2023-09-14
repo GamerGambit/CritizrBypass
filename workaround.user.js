@@ -195,7 +195,7 @@ async function setFeedbackType(json, type)
 
 async function processDissatisfactionAlert(json)
 {
-    var name = json.last_item.object.user.first_name.trim();
+    let name = json.last_item.object.user.first_name.trim();
     const age = Math.round((Date.now() - Date.parse(json.last_item.object.created_at)) / 1000); // how old this dissatisfaction is in seconds
     log(json.id + " | Detected dissatisfaction from " + name + " | Age: " + age + "s");
 
@@ -314,7 +314,7 @@ async function main()
     }
 
     log("Checking Dissatisfaction Alerts and Messages", true);
-    var response = await fetch("https://critizr.com/bo/api/v2/threads?folder=active&state=need_reply&state=alert&sort=-last_item_created_at");
+    let response = await fetch("https://critizr.com/bo/api/v2/threads?folder=active&state=need_reply&state=alert&sort=-last_item_created_at");
 
     if (!response.ok)
     {
@@ -323,7 +323,7 @@ async function main()
         return;
     }
 
-    var json = await response.json();
+    let json = await response.json();
 
     let processed = false;
     for (const result of json.results)

@@ -283,23 +283,19 @@ async function processMessage(json)
         await putOnHold(json);
         return true;
     }
-    else
+
+    if (json.last_item.object.hasOwnProperty("survey_participation") && !json.last_item.object.hasOwnProperty("external_review") && json.last_item.object.survey_participation.answer_to_highlight.value > 8)
     {
-        if (json.last_item.object.hasOwnProperty("survey_participation") && !json.last_item.object.hasOwnProperty("external_review") && json.last_item.object.survey_participation.answer_to_highlight.value > 8)
-        {
-            log(json.id + " | NPS > 8, marking as compliment");
-            await setFeedbackType(json, FeedbackId.Compliment); // Set feeback type to "Compliment"
+        log(json.id + " | NPS > 8, marking as compliment");
+        await setFeedbackType(json, FeedbackId.Compliment); // Set feeback type to "Compliment"
 
-            log(json.id + " | Sending promoter reply");
-            await sendReply(json, promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Send reply
-        }
-
-        log(json.id + " | Marking as done", true);
-        await markDone(json);
-        return true;
+        log(json.id + " | Sending promoter reply");
+        await sendReply(json, promoterReply.replace("@NAME@", name).replace("@STORE@", toTitleCase(json.place.name))); // Send reply
     }
 
-    return false;
+    log(json.id + " | Marking as done", true);
+    await markDone(json);
+    return true;
 }
 
 async function processAlertsAndMessages()

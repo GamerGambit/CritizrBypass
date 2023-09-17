@@ -4,7 +4,9 @@
 // @version      0.1
 // @description  try to take over the world!
 // @author       Tyler Duffus
-// @match        https://critizr.com/pro/messages/active/*
+// @match        https://critizr.com/pro/messages/active*
+// @match        https://critizr.com/pro/login/sso*
+// @match        https://critizr.com/pro/
 // @icon         https://critizr.com/media/backoffice/misc/favicon-32x32.png
 // @grant        none
 // ==/UserScript==
@@ -300,7 +302,7 @@ async function processMessage(json)
     return false;
 }
 
-async function main()
+async function processAlertsAndMessages()
 {
     // If Critizr is reporting some error, bail and refresh the page after 5 seconds.
     if (document.querySelector(".error-view"))
@@ -311,7 +313,18 @@ async function main()
     }
 
     log("Checking Dissatisfaction Alerts and Messages", true);
-    let response = await fetch("https://critizr.com/bo/api/v2/threads?folder=active&state=need_reply&state=alert&sort=-last_item_created_at");
+    let response;
+
+    try
+    {
+        response = await fetch("https://critizr.com/bo/api/v2/threads?folder=active&state=need_reply&state=alert&sort=-last_item_created_at");
+    }
+    catch(e)
+    {
+        log("Failed to fetch threads, freshing", true);
+        location.replace("https://critizr.com/pro/messages/active");
+        return;
+    }
 
     if (!response.ok)
     {
@@ -342,6 +355,40 @@ async function main()
     }
 }
 
+function login()
+{
+    log("SSO page, logging in");
+    let input = document.querySelector("input[name='username']");
+    let submit = document.querySelector("button[type='submit']");
+
+    for (let i = 0; i < localStorage.length; ++i) {
+        let key = localStorage.key(i);
+        let value = localStorage.getItem(key);
+
+        if (key.startsWith("persist:hs-beacon-message-"))
+        {
+            try
+            {
+                let json = JSON.parse(value);
+                let msgJson = JSON.parse(json.message);
+
+                log("Found \"persist:hs-beacon-message\" in local store. Logging in with " + msgJson.email, true);
+                input.value = msgJson.email;
+                submit.click();
+            }
+            catch(e)
+            {
+                log(e.message, true);
+            }
+            finally
+            {
+                break;
+            }
+
+        }
+    }
+}
+
 (async function() {
     log("Loaded Page at " + new Date(Date.now()) + ", checking auth");
 
@@ -354,16 +401,27 @@ async function main()
 
             try
             {
-                await main();
+                // If we are on the login page
+                if (location.href.includes("sso"))
+                {
+                    login();
+                    return;
+                }
+                else if (location.href.includes("/messages/active")) // if we are in active messages
+                {
+                    await processAlertsAndMessages();
+                }
+                else // we get redirected to `/pro/` after logging in
+                {
+                    log("Redirecting to messages", true);
+                    location.replace("https://critizr.com/pro/messages/active");
+                }
             }
             catch (e)
             {
                 log(`Exception thrown: ${e} | ${e.stack}`);
                 await delay(10000); // wait 10 seconds so we dont spam, if the error happens immediately after the script is active
             }
-
-            log("Refreshing page", true);
-            //window.location.replace("https://critizr.com/pro/messages/active/");
         }
         else
         {

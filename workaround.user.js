@@ -2,7 +2,7 @@
 // @name         Critizr/Goodays AI Workaround
 // @namespace    http://tampermonkey.net/
 // @version      0.1
-// @description  try to take over the world!
+// @description  Automatically respond to dissatisfaction alerts, promoter feedback, and messages that should have been dissatisfaction alerts.
 // @author       Tyler Duffus
 // @match        https://critizr.com/pro/messages/active*
 // @match        https://critizr.com/pro/login/sso*
